@@ -1,0 +1,26 @@
+# Verifica cada envio: instala as dependências exatas, roda as partidas de teste do motor e gera o site.
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Partidas de teste do motor (bots)
+        run: npm test
+      - name: Build do site
+        run: npm run build
+      - name: Conferir que nenhum gancho de teste foi para o site
+        run: |
+          ! grep -rq "piloto-teste\|__piloto" dist/

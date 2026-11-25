@@ -1,0 +1,19 @@
+# Cabeçalhos de segurança e de cache aplicados pelo Cloudflare Pages.
+# CSP: tudo vem do próprio site. 'unsafe-inline' só em estilos (o jogo usa atributos style= gerados em tela);
+# nenhum script inline é permitido. Na etapa de contas, connect-src ganha o endereço do Supabase e o Turnstile entra em script-src/frame-src.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()
+  Cross-Origin-Opener-Policy: same-origin
+
+# Arquivos com hash no nome (JS, CSS, fontes): podem ficar em cache por 1 ano.
+/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Imagens do jogo (sem hash no nome): cache de 1 dia.
+/assets/*
+  Cache-Control: public, max-age=86400

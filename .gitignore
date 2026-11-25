@@ -1,0 +1,21 @@
+# dependências e build
+node_modules/
+dist/
+
+# segredos e configurações locais: NUNCA versionar
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.dev.vars
+.wrangler/
+supabase/.temp/
+supabase/.branches/
+
+# sistema e editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
