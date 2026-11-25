@@ -2,8 +2,11 @@
 // dados → animação/áudio → motor de regras → bots → interface.
 import "./fonts.js";
 import "./style.css";
+import "./manual.css";
 import "./data.js";
 import "./fx.js";
 import "./engine.js";
 import "./bots.js";
+import "./auxilio.js";
+import "./manual.js";
 import "./ui.js";

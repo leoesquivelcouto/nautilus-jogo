@@ -291,7 +291,7 @@
     return `<div class="sec acts"><h3>Seu turno</h3>
       <div class="status"><span>Navegação: <b>${mv}</b></span><span>Atividade: <b>${at}</b></span></div>
       ${hint}<div class="actgrid">${btns}</div>
-      <div class="row"><button class="btn" id="tradeBtn" ${busy ? "disabled" : ""}>Negociar</button><button class="btn" id="sugBtn" ${busy ? "disabled" : ""} title="O que o bot difícil faria no seu lugar (tecla D)">Dica</button></div>
+      <div class="row"><button class="btn" id="tradeBtn" ${busy ? "disabled" : ""}>Negociar</button><button class="btn" id="sugBtn" ${busy ? "disabled" : ""} title="O que o bot difícil faria no seu lugar (tecla D)">Dica</button><button class="btn" id="auxBtn2" title="Carta de auxílio (tecla C)">Preços</button></div>
       ${sug ? `<div class="sugbox">${sug.html}</div>` : ""}
       <button class="btn gold endturn" id="endBtn" ${busy ? "disabled" : ""}>Encerrar turno <kbd>Enter</kbd></button></div>`;
   }
@@ -321,6 +321,7 @@
     const eb = $("#endBtn"); if (eb) eb.addEventListener("click", tryEndTurn);
     const tb = $("#tradeBtn"); if (tb) tb.addEventListener("click", openTrade);
     const sb = $("#sugBtn"); if (sb) sb.addEventListener("click", showSuggestion);
+    const ab = $("#auxBtn2"); if (ab) ab.addEventListener("click", toggleAux);
     side.querySelectorAll("[data-lf]").forEach((b) => b.addEventListener("click", () => { logFilter = b.dataset.lf; renderSide(); const l = side.querySelector(".log"); l.scrollTop = l.scrollHeight; }));
     animateDiffs(side);
     side.querySelectorAll("[data-pid]").forEach((b) => { const go = () => showPlayer(+b.dataset.pid); b.addEventListener("click", go); b.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } }); });
@@ -358,10 +359,17 @@
     if (G.round !== lastRound) { if (lastRound) FX.pop($("#roundN"), 1.5); lastRound = G.round; }
     if (!G.over && c.id !== lastTurnPid) { lastTurnPid = c.id; const d = $("#turnpill .dot"); if (d) FX.pop(d, 1.35); }
   }
+  function auxCtx() {
+    const p = human(), here = new Set();
+    if (G && p && !G.over) for (const l of E.locations(G, p)) if (l.ok) here.add(l.loc);
+    return { rules: G ? G.rules : cfg.rules, arts: p ? p.arts.length : undefined, here };
+  }
+  function toggleAux() { NT.Aux.toggle(auxCtx()); }
   function update() {
     // vitória no meio do próprio turno: libera o laço para mostrar o fim de jogo
     if (G && G.over && endTurnResolve) { const r = endTurnResolve; endTurnResolve = null; setTimeout(r, 0); }
     renderTop(); renderBoard(); renderSide();
+    if (NT.Aux.isOpen()) NT.Aux.refresh(auxCtx());
   }
 
   // ======================= ENCERRAR TURNO, DICA, FICHA =======================
@@ -939,7 +947,7 @@
     el.innerHTML = `<div class="bgimg"></div><div class="bgshade"></div><svg class="rose" aria-hidden="true"><use href="#i-compass"/></svg><div class="inner">
       <div class="hero"><h1>NAUTILUS</h1><svg class="orn" aria-hidden="true"><use href="#i-orn"/></svg>
         <p>Comande um capitão pirata contra bots: pesque, saqueie baús, compre artefatos na Pedra das Sereias e sobreviva à Maré Negra. Quem reunir ${cfg.rules.winArts} artefatos primeiro vence.</p>
-        <div class="row">${saved ? `<button class="btn" id="contBtn">Continuar partida salva (rodada ${saved.round})</button>` : ""}<button class="btn gold cta" id="startBtn">Zarpar</button></div></div>
+        <div class="row"><button class="btn mn-open" id="manBtn"><svg aria-hidden="true"><use href="#i-compass"/></svg>Manual do jogo</button>${saved ? `<button class="btn" id="contBtn">Continuar partida salva (rodada ${saved.round})</button>` : ""}<button class="btn gold cta" id="startBtn">Zarpar</button></div></div>
       <div class="cols">
         <div class="sec"><h3>Você</h3><div class="row"><label class="field" style="flex:1">Nome do capitão<input type="text" id="cfgName" value="${esc(cfg.name)}" maxlength="24"></label><label class="field">Cor<select class="inp" id="cfgColor">${colorOpts}</select></label></div></div>
         <div class="sec"><h3>Mesa</h3>
@@ -982,11 +990,13 @@
     }
     $("#resetRules").addEventListener("click", () => { cfg.rules = NT.defaultRules(); saveCfg(); showSetup(); $("details.rules").open = true; });
     $("#startBtn").addEventListener("click", startGame);
+    $("#manBtn").addEventListener("click", () => NT.Manual.open({ rules: cfg.rules }));
     const cb = $("#contBtn"); if (cb) cb.addEventListener("click", () => continueGame(saved));
   }
   function botNames() { return NT.CAPITAES.filter((n) => n !== cfg.name).slice(0, 5); }
   function abortCurrent() {
     if (G) { G.aborted = true; G.over = true; }
+    NT.Aux.close();
     combatOv = null;
     if (endTurnResolve) { const r = endTurnResolve; endTurnResolve = null; r(); }
     $("#modalRoot").innerHTML = ""; combatOv = null; modalStack = 0;
@@ -1009,7 +1019,7 @@
         <li><b>Meta:</b> ${G.rules.winArts} artefatos. Eles vêm quase sempre da Pedra das Sereias: 1 concha + ouro (peixe vale ouro lá).</li>
         <li><b>Começo:</b> pesque no mar aberto, abra baús ao lado das ilhas e contrate tripulantes (mais tripulantes = mais peixe e mais dados).</li>
         <li><b>Cuidado:</b> passar por águas roxas dá maldição a piratas. Na rodada ${G.rules.mareRound || "—"} todos viram esqueletos.</li>
-        <li><b>Ajuda:</b> o botão <b>Dica</b> (tecla D) sugere uma jogada, e clicar num capitão mostra o que ele tem à mostra.</li></ul></div>` });
+        <li><b>Ajuda:</b> o botão <b>Dica</b> (tecla D) sugere uma jogada, <b>Preços</b> (tecla C) abre a carta de auxílio e <b>Manual</b> (tecla ?) explica tudo.</li></ul></div>` });
   }
   function startGame() {
     const used = new Set([cfg.color]); const cols = NT.CORES.map((_, i) => i).filter((i) => !used.has(i));
@@ -1051,10 +1061,13 @@
   $("#zFit").addEventListener("click", resetZoom);
   document.addEventListener("keydown", (e) => {
     if (e.target.closest && e.target.closest("input,select,textarea")) return;
+    if (NT.Manual.isOpen()) return; // o manual tem os próprios atalhos
     const ovs = document.querySelectorAll("#modalRoot .ov:not(.closing)"), ov = ovs[ovs.length - 1];
     if (e.key === "Escape" && !soundPop.hidden) { soundPop.hidden = true; return; }
     if (ov) { if (e.key === "Escape" && ov.__close) ov.__close(); return; }
     if (!G || !$("#setup").hidden) return;
+    if (e.key === "Escape" && NT.Aux.isOpen()) { NT.Aux.close(); return; }
+    if (e.key === "c" || e.key === "C") { toggleAux(); return; }
     if (e.key === "Enter" && isHumanTurn() && !(e.target.closest && e.target.closest("button"))) { e.preventDefault(); tryEndTurn(); }
     else if ((e.key === "d" || e.key === "D") && isHumanTurn()) showSuggestion();
     else if (e.key === "?" ) $("#helpBtn").click();
@@ -1062,23 +1075,8 @@
     else if (e.key === "-") zoomCenter(1.3);
     else if (e.key === "0") resetZoom();
   });
-  $("#helpBtn").addEventListener("click", () => {
-    const r = G ? G.rules : cfg.rules;
-    modal({
-      title: "Como jogar", wide: true, closeValue: null, buttons: [{ label: "Fechar", value: null, kind: "gold" }],
-      body: `<div class="help"><ul>
-        <li><b>Objetivo:</b> ser o primeiro a ter ${r.winArts} artefatos. A maioria é comprada na Pedra das Sereias: 1 concha + ouros pela escada (${r.ladder}), no máximo ${r.artPerTurn} por turno. Lá, peixe ${r.pedraFish ? "vale" : "não vale"} como ouro.</li>
-        <li><b>Turno:</b> 1 navegação (até sua velocidade, clique num hexágono destacado) e 1 atividade, em qualquer ordem. Negociar e usar artefatos de uso único é livre.</li>
-        <li><b>Atividades:</b> pescar (piratas no mar aberto, esqueletos nas águas amaldiçoadas), abrir baú ao lado de uma ilha (piratas) ou naufrágio ao lado de um cemitério (esqueletos), operar num local (Comércio, Pedra, Taverna, Ossuário, Capela, Altar) ou atacar um navio ao seu lado.</li>
-        <li><b>Bordas:</b> Taverna, Capela, Comércio/Ossuário, Pedra das Sereias e as Passagens são usadas encostando o navio na linha vermelha. Atravessar uma Passagem custa 1 casa.</li>
-        <li><b>Águas amaldiçoadas:</b> um pirata que entra nelas recebe uma maldição (no máximo 1 por turno). Esqueletos são imunes.</li>
-        <li><b>Virada:</b> na rodada ${r.mareRound || "—"} (Maré Negra) ou quando acabam os baús, todos viram esqueletos. Antes disso, o Altar transforma por ${r.transformCost} ouros${r.transformGift ? " e dá 1 concha" : ""}.</li>
-        <li><b>Combate:</b> o atacante escolhe os dados (até 3, um por tripulante disponível), o defensor responde. Vale o maior dado + bônus. Quem vence saqueia ${r.lootPerDie} carta por dado que usou; quem perde sofre dano igual aos dados que usou. Pirata só fica ferido (e protegido); esqueleto perde tripulantes e, sem eles, afunda e entrega 1 artefato.${r.artSteal !== "nao" ? " Ao vencer um ataque contra " + (r.artSteal === "esqueletos" ? "um esqueleto" : "alguém") + " com mais artefatos que você, pode tomar 1 artefato no lugar do saque." : ""}</li>
-        <li><b>Limite:</b> no máximo ${r.handLimit} recursos na mão.</li>
-        <li><b>Mesa:</b> clique num capitão no painel para ver os artefatos, efeitos e maldições dele. Passe o mouse num hexágono destacado para ver o que dá para fazer lá. A Dica mostra o que o bot difícil faria no seu lugar.</li>
-        <li><b>Atalhos:</b> Enter encerra o turno · D pede uma dica · + e − dão zoom (ou a roda do mouse; arraste para mover) · 0 enquadra o mapa · Esc fecha janelas · ? abre esta ajuda.</li></ul></div>`,
-    });
-  });
+  $("#helpBtn").addEventListener("click", () => NT.Manual.open({ rules: G && $("#setup").hidden ? G.rules : cfg.rules }));
+  $("#auxBtn").addEventListener("click", () => { if (G && $("#setup").hidden) toggleAux(); else NT.Manual.open({ rules: cfg.rules, start: 6 }); });
   window.addEventListener("error", (e) => toast("Erro: " + e.message, "combat"));
   if (DEV) NT.debug = { get G() { return G; }, ask, modal };
 
