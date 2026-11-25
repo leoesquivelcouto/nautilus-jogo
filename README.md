@@ -2,6 +2,8 @@
 
 Jogo de tabuleiro pirata no navegador: 1 jogador contra bots (fácil, médio, difícil), com as regras do Manual v5.
 
+**No ar:** https://nautilus-jogo.pages.dev
+
 ## Estrutura
 
 | Pasta | Conteúdo |
@@ -28,9 +30,11 @@ Testes do motor mais longos: `node tests/dificuldade.cjs 150`, `node tests/diagn
 
 O site é publicado pelo Cloudflare Pages ligado a este repositório: cada envio para `main` gera uma nova versão.
 
+- Projeto no Cloudflare: `nautilus-jogo` (conta pessoal), ramo de produção `main`
 - Comando de build: `npm run build`
 - Pasta de saída: `dist`
-- Variável de ambiente: `NODE_VERSION = 22`
+- Versão do Node: lida do arquivo `.nvmrc` (22)
+- O app do Cloudflare no GitHub tem acesso só a este repositório.
 
 ## Segurança
 
