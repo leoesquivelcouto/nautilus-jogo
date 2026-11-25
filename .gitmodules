@@ -1,0 +1,3 @@
+[submodule "ferramentas/extensao-fila-de-imagens"]
+	path = ferramentas/extensao-fila-de-imagens
+	url = https://github.com/leoesquivelcouto/nautilus.git

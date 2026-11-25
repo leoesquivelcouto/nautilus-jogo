@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Card Print Studio</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{--bg:#eceef1;--pn:#fff;--tx:#18202e;--mu:#667086;--bd:#d3d8e0;--ac:#0b7285;--er:#c2255c;--wn:#b35c00;--ok:#2b8a3e;--hd:#18202e;color-scheme:light}
+@media(prefers-color-scheme:dark){:root{--bg:#12161d;--pn:#1b212b;--tx:#e6e9ef;--mu:#98a1b3;--bd:#323a48;--ac:#3bc9db;--er:#f06595;--wn:#ffa94d;--ok:#69db7c;--hd:#0c0f14;color-scheme:dark}}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 system-ui,"Segoe UI",sans-serif;background:var(--bg);color:var(--tx)}
+header{background:var(--hd);color:#e6e9ef;padding:8px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+header b{font-size:16px;margin-right:6px}header select,header button{font-size:12px}
+button,select,input{font:inherit;color:var(--tx);background:var(--pn);border:1px solid var(--bd);border-radius:5px;padding:5px 9px}
+button{cursor:pointer}button:hover{border-color:var(--ac)}button.p{background:var(--ac);color:#fff;border-color:var(--ac);font-weight:600}
+button.big{font-size:17px;padding:14px 26px;width:100%}button.d{color:var(--er)}
+nav{display:flex;gap:2px;padding:8px 14px 0;border-bottom:1px solid var(--bd);background:var(--pn)}
+nav button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:9px 14px}nav button.on{border-color:var(--ac);font-weight:700}
+main{padding:14px;display:grid;gap:14px}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.g2{grid-template-columns:minmax(280px,360px) 1fr;align-items:start}@media(max-width:800px){.g2{grid-template-columns:1fr}}
+.pn{background:var(--pn);border:1px solid var(--bd);border-radius:8px;padding:12px}
+details{border:1px solid var(--bd);border-radius:6px;margin-bottom:8px;padding:6px 10px;background:var(--pn)}summary{cursor:pointer;font-weight:600}
+label{display:flex;justify-content:space-between;gap:8px;align-items:center;margin:5px 0;font-size:13px}label input,label select{width:120px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.cd{background:var(--pn);border:2px solid var(--bd);border-radius:6px;padding:6px;font-size:12px;cursor:pointer}.cd.on{border-color:var(--ac)}
+.cd img{width:100%;height:130px;object-fit:contain;background:repeating-conic-gradient(#8883 0 25%,#0000 0 50%) 0 0/12px 12px}
+.cd b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cd small{color:var(--mu);display:block}
+.t{display:inline-block;padding:0 6px;border-radius:9px;font-size:11px;border:1px solid currentColor}.ok{color:var(--ok)}.wn{color:var(--wn)}.er{color:var(--er)}
+.msg{padding:8px 10px;border-left:4px solid;margin:6px 0;background:var(--bg);border-radius:4px}.msg.e{border-color:var(--er)}.msg.w{border-color:var(--wn)}.msg.i{border-color:var(--ac)}
+canvas{background:#fff;box-shadow:0 2px 10px #0004;max-width:none}.sc{overflow:auto;max-height:78vh;background:#8f97a5;padding:12px;border-radius:8px}
+.cats{display:flex;flex-direction:column;gap:3px}.cats button{text-align:left}.cats button.on{background:var(--ac);color:#fff}
+small.h{color:var(--mu)}#toast{position:fixed;bottom:14px;right:14px;background:var(--hd);color:#fff;padding:10px 14px;border-radius:8px;max-width:420px;display:none;white-space:pre-wrap;z-index:9}
+.drop{outline:3px dashed var(--ac);outline-offset:-6px}
+</style></head><body>
+<header><b>Card Print Studio</b><select id="ps" onchange="openP(this.value)"></select>
+<button onclick="projAct('new')">Novo</button><button onclick="projAct('dup')">Duplicar</button><button onclick="projAct('ren')">Renomear</button><button onclick="projAct('del')">Excluir</button>
+<button onclick="zipOut()">Backup ZIP</button><button onclick="$('#zi').click()">Abrir ZIP</button><input id="zi" type="file" accept=".zip" hidden onchange="zipIn(this.files[0]);this.value=''">
+<button onclick="undo()">↶ Desfazer</button><button onclick="redo()">↷ Refazer</button><button onclick="runTests()">Testes</button>
+<small id="sv" style="opacity:.7"></small><small id="stg" style="opacity:.7"></small></header>
+<nav id="nv"></nav><main id="mn"></main><div id="toast"></div>
+<input id="fi" type="file" accept="image/*,.zip" multiple hidden onchange="addFiles([...this.files]);this.value=''">
+<input id="fd" type="file" webkitdirectory hidden onchange="addFiles([...this.files]);this.value=''">
+<input id="fb" type="file" accept="image/*" multiple hidden onchange="addFiles([...this.files],true);this.value=''">
+<script>
+const $=(s)=>document.querySelector(s),uid=()=>Math.random().toString(36).slice(2,9),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const SZ={'Pôquer 63,5×88,9':[63.5,88.9],'Tarot 70×120':[70,120],'Bridge 57×89':[57,89],'Mini 41×63':[41,63]},PP={A4:[210,297],A3:[297,420],Letter:[215.9,279.4],'Ofício':[215.9,330.2],'Personalizado':null};
+const DEF=()=>({paper:'A4',pw:210,ph:297,land:false,cw:63.5,ch:88.9,cols:0,rows:0,gx:2.5,gy:2.5,ml:7,mr:7,mt:7,mb:7,np:0,align:'c',rad:3,marks:true,contour:false,duplex:'long',dx:0,dy:0,dpi:300,order:'import',seed:7,fit:'cover',tol:2,ref:null,refW:63.5,back:null,expMode:'combined',expCats:[],ids:false,rotAll:0,rotBack:0,autoRot:false,catPage:false,label:false});
+let P,B={},sel=new Set,curCat='all',tab='lib',side='front',pg=0,zoom=1,hist=[],fut=[],last='',lim=200,q='',TH={},st;
+const snap=()=>JSON.stringify(P);
+/* ---------- persistência (IndexedDB) ---------- */
+const db=new Promise((ok,ko)=>{const r=indexedDB.open('cps',1);r.onupgradeneeded=()=>r.result.createObjectStore('p');r.onsuccess=()=>ok(r.result);r.onerror=ko});
+const tx=async(m,f)=>{const d=await db;return new Promise((ok,ko)=>{const t=d.transaction('p',m),r=f(t.objectStore('p'));t.oncomplete=()=>ok(r.result);t.onerror=()=>ko(t.error)})};
+const saveNow=()=>{const imgs={};for(const c of[...P.cards,...P.backs])if(B[c.id])imgs[c.id]=B[c.id];return tx('readwrite',s=>s.put({meta:P,imgs},P.id))};
+const dirty=()=>{clearTimeout(st);$('#sv').textContent='salvando…';st=setTimeout(async()=>{try{await saveNow();$('#sv').textContent='salvo às '+new Date().toLocaleTimeString()}catch(e){$('#sv').textContent='ERRO ao salvar: '+e.message}est()},700)};
+async function est(){if(navigator.storage?.estimate){const e=await navigator.storage.estimate();$('#stg').textContent=` · armazenamento ${(e.usage/1e6).toFixed(0)} de ~${(e.quota/1e6).toFixed(0)} MB`}}
+const projs=async()=>(await tx('readonly',s=>s.getAll())).map(r=>({id:r.meta.id,name:r.meta.name}));
+async function hdr(){const l=await projs();$('#ps').innerHTML=l.map(p=>`<option value="${p.id}" ${p.id===P.id?'selected':''}>${esc(p.name)}</option>`).join('')}
+async function newP(name){P={id:uid(),name,cats:[],cards:[],backs:[],set:DEF()};B={};await saveNow();return P.id}
+async function openP(id){const r=await tx('readonly',s=>s.get(id));P=r.meta;P.set={...DEF(),...P.set};B=r.imgs||{};sel.clear();hist=[];fut=[];last=snap();localStorage.setItem('cps.last',id);await hdr();render();est()}
+async function projAct(a){if(a==='new'){const n=prompt('Nome do projeto:','Novo projeto');if(n){await newP(n);await openP(P.id)}}
+ if(a==='dup'){await saveNow();const c=JSON.parse(snap());c.id=uid();c.name+=' (cópia)';P=c;await saveNow();await openP(c.id)}
+ if(a==='ren'){const n=prompt('Novo nome:',P.name);if(n){P.name=n;await saveNow();await hdr()}}
+ if(a==='del'&&confirm('Excluir o projeto "'+P.name+'" definitivamente? Faça backup antes.')){await tx('readwrite',s=>s.delete(P.id));let l=await projs();if(!l.length){await newP('Meu projeto');l=await projs()}await openP(l[0].id)}}
+function change(){hist.push(last);if(hist.length>60)hist.shift();fut=[];last=snap();dirty();render()}
+const undo=()=>{if(!hist.length)return;fut.push(snap());P=JSON.parse(hist.pop());last=snap();dirty();render()},redo=()=>{if(!fut.length)return;hist.push(snap());P=JSON.parse(fut.pop());last=snap();dirty();render()};
+const U=(k,v)=>{P.set[k]=v;change()},toast=(t,ms=6000)=>{const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(e.t);e.t=setTimeout(()=>e.style.display='none',ms)};
+/* ---------- geometria (compartilhada por prévia e PDF) ---------- */
+function layout(s){const W=s.land?s.ph:s.pw,H=s.land?s.pw:s.ph,aw=W-s.ml-s.mr,ah=H-s.mt-s.mb,e=1e-6;
+ const ac=Math.max(0,Math.floor((aw+s.gx)/(s.cw+s.gx)+e)),ar=Math.max(0,Math.floor((ah+s.gy)/(s.ch+s.gy)+e)),cols=s.cols||ac,rows=s.rows||ar;
+ const tw=cols*s.cw+(cols-1)*s.gx,th=rows*s.ch+(rows-1)*s.gy,fits=cols>0&&rows>0&&tw<=aw+e&&th<=ah+e&&s.gx>=0&&s.gy>=0;
+ return{W,H,aw,ah,ac,ar,cols,rows,tw,th,fits,per:fits?cols*rows:0,ox:s.align==='c'?s.ml+(aw-tw)/2:s.ml,oy:s.align==='c'?s.mt+(ah-th)/2:s.mt}}
+function rnd(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function items(){const s=P.set;let c=P.cards.filter(k=>!s.expCats.length||s.expCats.includes(k.cat));
+ if(s.order==='name')c=[...c].sort((a,b)=>a.name.localeCompare(b.name,'pt',{numeric:true}));
+ if(s.order==='cat'){const o=['',...P.cats.map(x=>x.id)];c=[...c].sort((a,b)=>o.indexOf(a.cat)-o.indexOf(b.cat))}
+ const out=[],shuf=a=>{const r=rnd(s.seed);for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}};for(const k of c)for(let i=0;i<k.copies;i++)out.push(k);
+ if(s.catPage){const per=layout(s).per||1,res=[];for(const id of['',...P.cats.map(x=>x.id)]){const g=out.filter(k=>k.cat===id);if(!g.length)continue;if(s.order==='random')shuf(g);res.push(...g);while(res.length%per)res.push(null)}return res}
+ if(s.order==='random')shuf(out);return out}
+function backOf(k){const c=P.cats.find(x=>x.id===k.cat);let v=k.back!==undefined?k.back:(c&&c.back!==undefined?c.back:P.set.back);return!v||v==='none'||!B[v]||!P.backs.some(b=>b.id===v)?null:v}
+const dim=(id,r)=>r%180?[B[id].h,B[id].w]:[B[id].w,B[id].h];
+function effRot(id,r0){let r=((r0%360)+360)%360;if(P.set.autoRot&&B[id]){const[w,h]=dim(id,r);if(w!==h&&(w>h)!==(P.set.cw>P.set.ch))r=(r+90)%360}return r}
+const rotFront=k=>effRot(k.id,(k.rot||0)+P.set.rotAll),rotBack=id=>effRot(id,(P.backs.find(b=>b.id===id)?.rot||0)+P.set.rotBack);
+const pageCat=(p,it)=>{const n=layout(P.set).per,k=it.slice(p*n,(p+1)*n).find(Boolean);return k?(P.cats.find(c=>c.id===k.cat)?.name||'Sem categoria'):''};
+function slots(p,sd,cal){const s=P.set,L=layout(s),it=cal?Array.from({length:L.per},(_,i)=>({cal:1,id:'c'+i})):items(),out=[];if(!L.fits)return out;
+ const mx=(s.duplex!=='short')===(L.W<L.H);
+ for(let i=0;i<L.per;i++){const k=it[p*L.per+i];if(k===undefined)break;if(k===null)continue;let r=Math.floor(i/L.cols),c=i%L.cols,img=k.id;
+  if(sd==='back'){img=k.cal?'cal':backOf(k);if(mx)c=L.cols-1-c;else r=L.rows-1-r}
+  out.push({k,i,n:p*L.per+i+1,r,c,img,rot:k.cal||!img?0:sd==='back'?rotBack(img):rotFront(k),x:L.ox+c*(s.cw+s.gx)+(sd==='back'?s.dx:0),y:L.oy+r*(s.ch+s.gy)+(sd==='back'?s.dy:0)})}return out}
+function fitRect(iw,ih,x,y,w,h,f){let dw=w,dh=h;if(f==='cover'){const k=Math.max(w/iw,h/ih);dw=iw*k;dh=ih*k}else if(f==='contain'){const k=Math.min(w/iw,h/ih);dw=iw*k;dh=ih*k}return[x+(w-dw)/2,y+(h-dh)/2,dw,dh]}
+function mk(x,y,w,h,ln){const o=.5,l=2.5;for(const[cx,sx]of[[x,-1],[x+w,1]])for(const[cy,sy]of[[y,-1],[y+h,1]]){ln(cx+sx*o,cy,cx+sx*(o+l),cy);ln(cx,cy+sy*o,cx,cy+sy*(o+l))}}
+const effFit=k=>k.fit||P.set.fit;
+function dpiOf(k,s){const[iw,ih]=dim(k.id,rotFront(k)),[,,dw,dh]=fitRect(iw,ih,0,0,s.cw,s.ch,effFit(k));return Math.min(iw/dw,ih/dh)*25.4}
+function diag(k){const s=P.set,ref=P.cards.find(c=>c.id===s.ref&&B[c.id]),R=ref?dim(ref.id,rotFront(ref)):[s.cw,s.ch],tr=R[0]/R[1],[w,h]=dim(k.id,rotFront(k)),d=(w/h/tr-1)*100,a=Math.abs(d),dpi=dpiOf(k,s),o={d,dpi,prop:a>s.tol,low:dpi<s.dpi,t:'Compatível',c:'ok'};
+ if(o.prop){const f=effFit(k);o.t=(Math.abs(h/w/tr-1)*100<=s.tol?'Parece girada (use Girar) · ':'')+(f==='cover'?'Necessita de corte':f==='contain'?'Ajustar enquadramento (sobram bordas)':'Será distorcida')+` · Δ${d.toFixed(1)}%`;o.c='wn';if(a>25){o.c='er';o.t='Revisão manual recomendada · Δ'+d.toFixed(1)+'%'}}
+ else if(o.low){o.t=`Resolução insuficiente (${Math.round(dpi)} DPI)`;o.c='wn'}return o}
+/* ---------- verificação ---------- */
+function checks(){const s=P.set,L=layout(s),o=[],it=items().filter(Boolean),add=(l,m,f,fl)=>o.push({l,m,f,fl});
+ if(!P.cards.length)add('e','Nenhuma carta importada.');else if(!it.length)add('e','Nenhuma carta na seleção de exportação (ou todas com 0 cópias).');
+ if(!L.fits)add('e',`As cartas não cabem: ${L.cols}×${L.rows} precisam de ${L.tw.toFixed(1)}×${L.th.toFixed(1)} mm e a área útil é ${L.aw.toFixed(1)}×${L.ah.toFixed(1)} mm (ou espaçamento negativo). O software não reduz as cartas sozinho.`,'Usar distribuição automática','auto');
+ if(s.rad>Math.min(s.cw,s.ch)/2)add('e','O raio dos cantos é maior que metade do menor lado da carta.','Limitar raio','rad');
+ if(s.marks&&(s.gx<2.5||s.gy<2.5||Math.min(s.ml,s.mr,s.mt,s.mb)<2.5))add('w','As marcas de corte (3 mm) cruzam a arte ou saem da folha: use espaçamento e margens ≥ 2,5 mm.','Ajustar para 2,5 mm','gap');
+ if(Math.min(s.ml,s.mr,s.mt,s.mb)<s.np)add('w',`Margens menores que a área não imprimível informada (${s.np} mm).`);
+ const dg=P.cards.map(k=>[k,diag(k)]),pr=dg.filter(x=>x[1].prop).map(x=>x[0]),lo=dg.filter(x=>!x[1].prop&&x[1].low).map(x=>x[0]);
+ if(pr.length)add('w',`${pr.length} carta(s) com proporção diferente (tolerância ${s.tol}%): ${pr.slice(0,4).map(k=>k.name).join(', ')}${pr.length>4?'…':''}. Serão cortadas/distorcidas conforme o enquadramento (ou gire-as, se estiverem deitadas).`,'Aplicar "cobrir" às divergentes','fit');
+ if(lo.length)add('w',`${lo.length} imagem(ns) abaixo de ${s.dpi} DPI efetivos: ${lo.slice(0,4).map(k=>k.name).join(', ')}${lo.length>4?'…':''}. A qualidade não pode ser recuperada.`);
+ const rf=P.cards.find(c=>c.id===s.ref&&B[c.id]);if(rf){const[a,b]=dim(rf.id,rotFront(rf));if(Math.abs(a/b/(s.cw/s.ch)-1)*100>s.tol)add('w','O tamanho físico atual da carta não tem a proporção da referência: aplique o tamanho da referência na aba Layout.')}
+ if(s.duplex!=='none'){const nb=it.filter(k=>!backOf(k));if(nb.length)add('w',`${new Set(nb).size} carta(s) sem verso associado: a posição ficará vazia no verso.`);
+  for(const id of new Set(it.map(backOf).filter(Boolean))){const[bw,bh]=dim(id,rotBack(id));if(Math.abs(bw/bh/(s.cw/s.ch)-1)*100>s.tol)add('w','Um verso tem proporção diferente do tamanho da carta e será enquadrado.')}
+  add('i','Duplex: imprima primeiro a folha de teste de registro. O alinhamento digital não elimina a folga mecânica da impressora; use o ajuste X/Y do verso.')}
+ const nm={};P.cards.forEach(k=>nm[k.name]=(nm[k.name]||0)+1);const dup=Object.keys(nm).filter(n=>nm[n]>1);if(dup.length)add('i',`Nomes repetidos: ${dup.slice(0,5).join(', ')}.`);
+ return o}
+function fix(a){const s=P.set;if(a==='auto'){s.cols=0;s.rows=0}if(a==='rad')s.rad=Math.min(s.cw,s.ch)/2;if(a==='gap'){s.gx=Math.max(s.gx,2.5);s.gy=Math.max(s.gy,2.5);for(const m of['ml','mr','mt','mb'])s[m]=Math.max(s[m],2.5)}if(a==='fit')P.cards.forEach(k=>{if(diag(k).prop)k.fit='cover'});change()}
+/* ---------- importação ---------- */
+const EXT=/\.(png|jpe?g|webp|gif|bmp|avif)$/i,MT={png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',webp:'image/webp',gif:'image/gif',bmp:'image/bmp',avif:'image/avif'};
+async function mkThumb(bm){const k=Math.min(1,240/Math.max(bm.width,bm.height)),c=document.createElement('canvas');c.width=Math.max(1,bm.width*k|0);c.height=Math.max(1,bm.height*k|0);c.getContext('2d').drawImage(bm,0,0,c.width,c.height);return c.toDataURL('image/webp',.85)}
+async function addFiles(fs,isBack){const L=[],bad=[];for(const f of fs){if(/\.zip$/i.test(f.name)){try{const z=await JSZip.loadAsync(f);for(const[n,e]of Object.entries(z.files))if(!e.dir&&EXT.test(n)&&!/__MACOSX/.test(n))L.push(new File([await e.async('blob')],n.split('/').pop(),{type:MT[n.split('.').pop().toLowerCase()]}))}catch{bad.push(f.name)}}else if(f.type.startsWith('image/')||EXT.test(f.name))L.push(f);else bad.push(f.name)}
+ let n=0;const pre=snap();for(const f of L){toast(`Importando ${++n}/${L.length}: ${f.name}`,60000);try{const bm=await createImageBitmap(f),b0=await createImageBitmap(f,{imageOrientation:'none'}).catch(()=>bm),id=uid();
+  B[id]={blob:f,thumb:await mkThumb(bm),w:bm.width,h:bm.height,re:b0.width!==bm.width||b0.height!==bm.height};
+  const nm=f.name.replace(/\.[^.]+$/,'');if(isBack)P.backs.push({id,name:nm});else P.cards.push({id,name:nm,cat:curCat==='all'?'':curCat,copies:1,fit:undefined,back:undefined});bm.close?.();b0.close?.()}catch{bad.push(f.name)}}
+ hist.push(pre);fut=[];last=snap();dirty();render();toast(`${L.length-bad.filter(x=>L.some(f=>f.name===x)).length} imagem(ns) importada(s) sem alterar os originais.`+(bad.length?`\nNão importados (corrompidos/não suportados): ${bad.join(', ')}`:''),9000)}
+addEventListener('paste',e=>{const f=[...(e.clipboardData?.files||[])].filter(x=>x.type.startsWith('image/'));if(f.length)addFiles(f.map((x,i)=>new File([x],'colada-'+Date.now()+i+'.png',{type:x.type})))});
+addEventListener('dragover',e=>{e.preventDefault();document.body.classList.add('drop')});addEventListener('dragleave',e=>{if(!e.relatedTarget)document.body.classList.remove('drop')});
+addEventListener('drop',async e=>{e.preventDefault();document.body.classList.remove('drop');const fs=[];const walk=async en=>{if(en.isFile)fs.push(await new Promise(r=>en.file(r)));else if(en.isDirectory){const rd=en.createReader();let b;do{b=await new Promise(r=>rd.readEntries(r));for(const x of b)await walk(x)}while(b.length)}};
+ const its=[...e.dataTransfer.items].map(i=>i.webkitGetAsEntry?.()).filter(Boolean);if(its.length)for(const en of its)await walk(en);else fs.push(...e.dataTransfer.files);addFiles(fs)});
+async function testCards(){const mk=async(w,h,c,t)=>{const cv=document.createElement('canvas');cv.width=w;cv.height=h;const x=cv.getContext('2d');x.fillStyle=c;x.fillRect(0,0,w,h);x.strokeStyle='#fff';x.lineWidth=w/60;x.strokeRect(w/30,w/30,w-w/15,h-w/15);x.fillStyle='#fff';x.font=`bold ${w/5}px sans-serif`;x.textAlign='center';x.fillText(t,w/2,h/2);return new File([await new Promise(r=>cv.toBlob(r,'image/png'))],t+'.png',{type:'image/png'})};
+ const id=uid();P.cats.push({id,name:'Teste'});curCat=id;const fs=[];for(let i=1;i<=12;i++)fs.push(await mk(750,1050,`hsl(${i*30},60%,40%)`,'C'+i));fs.push(await mk(800,800,'#444','Quadrada'),await mk(300,420,'#a33','Baixa res'));await addFiles(fs);await addFiles([await mk(750,1050,'#223','VERSO')],true);P.set.back=P.backs[P.backs.length-1].id;change()}
+/* ---------- PDF ---------- */
+const toURL=b=>new Promise(r=>{const f=new FileReader;f.onload=()=>r(f.result);f.readAsDataURL(b)});
+async function pdfData(id,rot=0){const b=B[id],t=b.blob.type;if(!rot&&!b.re&&(t==='image/jpeg'||t==='image/png'))return[await toURL(b.blob),t==='image/png'?'PNG':'JPEG'];const bm=await createImageBitmap(b.blob),c=document.createElement('canvas'),q=rot%180;c.width=q?bm.height:bm.width;c.height=q?bm.width:bm.height;const x=c.getContext('2d');x.translate(c.width/2,c.height/2);x.rotate(rot*Math.PI/180);x.drawImage(bm,-bm.width/2,-bm.height/2);return[c.toDataURL('image/png'),'PNG']}
+async function genPdf(mode){const s=P.set,L=layout(s),it=mode==='calib'?[]:items(),n=mode==='calib'?1:Math.ceil(it.length/L.per),d=new jspdf.jsPDF({unit:'mm',format:[L.W,L.H],orientation:L.W>L.H?'l':'p',compress:false}),cache={};let first=true,cnt=0;
+ for(let p=0;p<n;p++)for(const sd of['front','back']){if(mode==='backs'&&sd==='front'||sd==='back'&&(mode==='fronts'||s.duplex==='none'&&mode!=='calib'))continue;if(!first)d.addPage([L.W,L.H],L.W>L.H?'l':'p');first=false;
+  toast(`Gerando PDF: folha ${p+1}/${n} (${sd==='front'?'frente':'verso'})`,60000);await new Promise(r=>setTimeout(r));
+  for(const sl of slots(p,sd,mode==='calib')){const x=sl.x,y=sl.y,w=s.cw,h=s.ch;
+   if(mode==='calib'){d.setDrawColor(0);d.setLineWidth(.2);d.rect(x,y,w,h);d.line(x+w/2,y,x+w/2,y+h);d.line(x,y+h/2,x+w,y+h/2);d.setFontSize(18);d.text(`${sl.i+1} ${sd==='front'?'FRENTE':'VERSO'}`,x+w/2,y+h/2-4,{align:'center'});continue}
+   if(sl.img){cnt++;const[iw,ih]=dim(sl.img,sl.rot),[a,b,dw,dh]=fitRect(iw,ih,x,y,w,h,sd==='front'?sl.k.fit||s.fit:s.fit);d.saveGraphicsState();s.rad>0?d.roundedRect(x,y,w,h,s.rad,s.rad,null):d.rect(x,y,w,h,null);d.clip();d.discardPath();
+    const ck=sl.img+':'+sl.rot,[u,f]=cache[ck]||(cache[ck]=await pdfData(sl.img,sl.rot));d.addImage(u,f,a,b,dw,dh,ck,'NONE');d.restoreGraphicsState()}
+   if(sd==='front'){if(s.contour){d.setDrawColor(150);d.setLineWidth(.1);d.roundedRect(x,y,w,h,s.rad,s.rad,'S')}if(s.marks){d.setDrawColor(0);d.setLineWidth(.15);mk(x,y,w,h,(a,b,c,e)=>d.line(a,b,c,e))}}}
+  if(s.label&&mode!=='calib'){d.setFontSize(7);d.setTextColor(90);d.text(`${pageCat(p,it)} · folha ${p+1}/${n} · ${sd==='front'?'frente':'verso'}`,L.W/2,Math.max(3,s.mt/2)+1,{align:'center'});d.setTextColor(0)}}
+ d.save(mode==='calib'?'teste-registro.pdf':`${P.name}-${mode}.pdf`);toast('Fim.',100);return{pages:first?0:d.getNumberOfPages(),cnt}}
+async function exportPdf(){const e=checks().filter(x=>x.l==='e');if(e.length){tab='chk';render();return toast('Corrija os erros antes de exportar: '+e[0].m)}
+ try{const L=layout(P.set),r=await genPdf(P.set.expMode),w=Date.now();$('#rep').innerHTML=`<div class="msg i"><b>PDF gerado.</b> ${r.pages} página(s) · ${r.cnt} imagens posicionadas · cartas ${P.set.cw}×${P.set.ch} mm · papel ${L.W}×${L.H} mm · modo ${P.set.expMode} · duplex ${P.set.duplex} · raio ${P.set.rad} mm · marcas ${P.set.marks?'sim':'não'}.<br>Avisos: ${checks().filter(x=>x.l==='w').length}. Para conferir: abra o PDF e imprima em "Tamanho real / 100%" (nunca "Ajustar à página").</div>`}catch(x){toast('Erro ao gerar PDF: '+x.message,12000);console.error(x)}}
+const PRESETS={casa:{duplex:'none',marks:true,contour:false,gx:2.5,gy:2.5},duplex:{duplex:'long',marks:true,gx:2.5,gy:2.5},manual:{duplex:'long',marks:true,gx:2.5,gy:2.5,expMode:'combined'},grafica:{duplex:'long',marks:true,gx:5,gy:5,ml:10,mr:10,mt:10,mb:10},eco:{duplex:'none',marks:false,gx:.5,gy:.5,ml:5,mr:5,mt:5,mb:5}};
+/* ---------- projeto portátil (ZIP) ---------- */
+const dl=(b,n)=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;a.click()};
+async function zipOut(){const z=new JSZip(),m={};z.file('project.json',snap());for(const c of[...P.cards,...P.backs]){const b=B[c.id];if(b){z.file('img/'+c.id,b.blob);m[c.id]={w:b.w,h:b.h,re:b.re,t:b.blob.type}}}z.file('imgs.json',JSON.stringify(m));toast('Gerando backup…',30000);dl(await z.generateAsync({type:'blob',compression:'STORE'}),P.name+'.cardstudio.zip');toast('Backup salvo.')}
+async function zipIn(f){try{const z=await JSZip.loadAsync(f),p=JSON.parse(await z.file('project.json').async('string')),m=JSON.parse(await z.file('imgs.json').async('string'));P=p;P.id=uid();B={};for(const[id,i]of Object.entries(m)){const bl=new Blob([await z.file('img/'+id).async('blob')],{type:i.t}),bm=await createImageBitmap(bl);B[id]={blob:bl,thumb:await mkThumb(bm),w:i.w,h:i.h,re:i.re}}await saveNow();await openP(P.id);toast('Projeto importado.')}catch(e){toast('ZIP inválido: '+e.message)}}
+/* ---------- testes ---------- */
+function runTests(){const o=[],t=(n,c)=>o.push((c?'✔ ':'✘ ')+n),sv=P.set;P.set={...DEF()};let L=layout(P.set);t('A4 + pôquer: 3×3',L.cols===3&&L.rows===3);t('conjunto cabe na área útil',L.tw<=L.aw&&L.th<=L.ah);
+ P.set.cols=4;t('4 colunas não cabem (sem reduzir cartas)',!layout(P.set).fits);P.set.cols=0;
+ const sv2=P.cards;P.cards=[{id:'a',cat:'',copies:9,name:'a'}];B.a={w:1,h:1};B.b={w:1,h:1};P.set.back='b';let f=slots(0,'front'),b=slots(0,'back');t('retrato/borda longa: espelha colunas',f[0].c===0&&b[0].c===2&&f[0].r===b[0].r);
+ P.set.duplex='short';b=slots(0,'back');t('retrato/borda curta: espelha linhas',b[0].r===2&&b[0].c===0);P.set.duplex='long';P.set.land=true;b=slots(0,'back');const l2=layout(P.set);t('paisagem/borda longa: espelha linhas',b[0].r===l2.rows-1&&b[0].c===0);P.set.land=false;
+ P.set.dx=1.5;b=slots(0,'back');t('calibração desloca o verso',Math.abs(b[0].x-(layout(P.set).ox+2*66+1.5))<1e-9);
+ B.d={w:1000,h:1400};t('DPI: 1000px em 63,5 mm ≈ 400',Math.abs(dpiOf({id:'d'},{cw:63.5,ch:88.9})-400)<2);delete B.d;
+ const sc=P.cats;P.set.catPage=true;P.set.land=false;P.cats=[{id:'x',name:'X'},{id:'y',name:'Y'}];P.cards=[{id:'a',cat:'x',copies:10,name:'a'},{id:'b',cat:'y',copies:2,name:'b'}];B.a={w:750,h:1050};B.b={w:750,h:1050};let it=items();t('uma categoria por página (27 posições, vazios no fim de cada categoria)',it.length===27&&it[10]===null&&it[18].cat==='y');t('verso mantém a mesma página da frente',slots(2,'back').length===2&&slots(1,'front').length===1);
+ P.set.catPage=false;B.a={w:1000,h:1000};t('diagnóstico detecta proporção diferente',diag({id:'a',cat:''}).prop===true);B.a={w:750,h:1050};t('diagnóstico aceita proporção correta',diag({id:'a',cat:''}).prop===false);
+ B.a={w:1400,h:1000};P.set.autoRot=true;t('giro automático de carta deitada',effRot('a',0)===90);P.set.autoRot=false;P.set.rotAll=90;t('girar todas',rotFront({id:'a'})===90);P.cats=sc;
+ P.cards=sv2;P.set=sv;delete B.a;delete B.b;const r=o.join('\n');console.log(r);toast(r,15000)}
+/* ---------- interface ---------- */
+const TABS={lib:'Biblioteca',lay:'Layout e prévia',bck:'Frente e verso',chk:'Verificação',exp:'Exportar PDF'};
+const num=(k,l,st=.1,mi=0)=>`<label>${l}<input type="number" step="${st}" min="${mi}" value="${P.set[k]}" onchange="U('${k}',+this.value)"></label>`;
+const sel_=(k,l,ops)=>`<label>${l}<select onchange="U('${k}',this.value)">${ops.map(([v,t])=>`<option value="${v}" ${P.set[k]==v?'selected':''}>${t}</option>`).join('')}</select></label>`;
+const chk_=(k,l)=>`<label>${l}<input type="checkbox" style="width:auto" ${P.set[k]?'checked':''} onchange="U('${k}',this.checked)"></label>`;
+const bOpts=(v,inh)=>`${inh?'<option value="">Herdar</option>':''}<option value="none" ${v==='none'?'selected':''}>Sem verso</option>${P.backs.map(b=>`<option value="${b.id}" ${v===b.id?'selected':''}>${esc(b.name)}</option>`).join('')}`;
+function render(){$('#nv').innerHTML=Object.entries(TABS).map(([k,v])=>`<button class="${tab===k?'on':''}" onclick="tab='${k}';render()">${v}${k==='chk'&&P?` (${checks().filter(x=>x.l!=='i').length})`:''}</button>`).join('');
+ $('#mn').className=tab==='lay'||tab==='bck'?'g2':'';$('#mn').innerHTML=({lib:libV,lay:layV,bck:bckV,chk:chkV,exp:expV})[tab]();if(tab==='lay'||tab==='bck')drawPrev()}
+const vis=()=>P.cards.filter(k=>(curCat==='all'||k.cat===curCat)&&(!q||k.name.toLowerCase().includes(q.toLowerCase())));
+function libV(){const v=vis(),s=P.set,ref=P.cards.find(c=>c.id===s.ref);
+ return`<div class="pn"><b>Categorias</b><div class="cats" style="margin:8px 0"><button class="${curCat==='all'?'on':''}" onclick="curCat='all';render()">Todas (${P.cards.length})</button><button class="${curCat===''?'on':''}" onclick="curCat='';render()">Sem categoria (${P.cards.filter(k=>!k.cat).length})</button>
+ ${P.cats.map(c=>`<button class="${curCat===c.id?'on':''}" onclick="curCat='${c.id}';render()">${esc(c.name)} (${P.cards.filter(k=>k.cat===c.id).length})</button>`).join('')}</div>
+ <div class="row"><button onclick="catAct('add')">+ Categoria</button>${P.cats.some(c=>c.id===curCat)?'<button onclick="catAct(\'ren\')">Renomear</button><button class="d" onclick="catAct(\'del\')">Excluir</button>':''}</div>
+ ${P.cats.some(c=>c.id===curCat)?`<small class="h">Cartas desta categoria: ${P.cards.filter(k=>k.cat===curCat).reduce((a,k)=>a+k.copies,0)} impressões · ≈${Math.ceil(P.cards.filter(k=>k.cat===curCat).reduce((a,k)=>a+k.copies,0)/Math.max(1,layout(s).per))} folhas (frente)</small>`:''}</div>
+ <div><div class="pn row" style="margin-bottom:10px"><button class="p" onclick="$('#fi').click()">Importar imagens / ZIP</button><button onclick="$('#fd').click()">Pasta</button><button onclick="testCards()">Gerar cartas de teste</button><small class="h">Também: arraste e solte ou cole (Ctrl+V).</small>
+ <input placeholder="Pesquisar por nome" value="${esc(q)}" onchange="q=this.value;render()"></div>
+ <div class="pn row" style="margin-bottom:10px"><b>${sel.size} selecionada(s)</b><button onclick="sel=new Set(vis().map(k=>k.id));render()">Selecionar visíveis</button><button onclick="sel.clear();render()">Limpar</button><button onclick="sel=new Set(P.cards.filter(k=>diag(k).prop).map(k=>k.id));render()">Selecionar divergentes</button>
+ <select onchange="bulk('cat',this.value);this.value='?'"><option value="?">Mover para…</option><option value="">Sem categoria</option>${P.cats.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>
+ <button onclick="bulk('copies')">Definir cópias</button><button onclick="bulk('dup')">Duplicar</button><button onclick="bulk('fit','cover')">Enquadrar: cobrir (corta)</button><button onclick="bulk('fit','contain')">Caber inteira</button><button onclick="bulk('fit','stretch')">Esticar</button><button onclick="bulk('rot',90)">Girar 90°</button><button onclick="bulk('rot',180)">Girar 180°</button><button onclick="bulk('rename')">Renomear em lote</button><button onclick="bulk('ref')">Usar como referência</button><button class="d" onclick="bulk('del')">Excluir</button></div>
+ ${ref?`<div class="msg i">Referência: <b>${esc(ref.name)}</b> (${ref.w}×${ref.h}px, proporção ${(ref.w/ref.h).toFixed(4)}). Defina o tamanho físico na aba Layout. Tolerância: <input type="number" step=".5" style="width:70px" value="${s.tol}" onchange="U('tol',+this.value)">%</div>`:''}
+ ${P.cards.length?'':'<div class="msg i">Biblioteca vazia. Importe imagens ou clique em "Gerar cartas de teste" para experimentar o fluxo completo.</div>'}
+ <div class="grid">${v.slice(0,lim).map(k=>{const m=B[k.id],D=diag(k),dg=D.t,c=D.c;return`<div class="cd ${sel.has(k.id)?'on':''}" onclick="tg('${k.id}')"><img src="${m.thumb}" loading="lazy"><b title="${esc(k.name)}">${esc(k.name)}</b><small>${m.w}×${m.h}px · ${(m.w/m.h).toFixed(3)}</small><small>${Math.round(D.dpi)} DPI efetivos${m.re?' · EXIF aplicado':''}${rotFront(k)?' · girada '+rotFront(k)+'°':''}</small><span class="t ${c}">${dg}</span><small>${backOf(k)?'verso ✔':'sem verso'} · cópias <input type="number" min="0" style="width:52px;padding:1px 4px" value="${k.copies}" onclick="event.stopPropagation()" onchange="cp('${k.id}',+this.value)"></small></div>`}).join('')}</div>
+ ${v.length>lim?`<p><button onclick="lim+=200;render()">Mostrar mais (${v.length-lim})</button></p>`:''}</div>`}
+const tg=id=>{sel.has(id)?sel.delete(id):sel.add(id);render()},cp=(id,v)=>{P.cards.find(k=>k.id===id).copies=Math.max(0,v|0);change()};
+function catAct(a){if(a==='add'){const n=prompt('Nome da categoria:');if(n){const id=uid();P.cats.push({id,name:n});curCat=id;change()}}else{const c=P.cats.find(x=>x.id===curCat);if(a==='ren'){const n=prompt('Novo nome:',c.name);if(n){c.name=n;change()}}if(a==='del'&&confirm('Excluir categoria? As cartas ficam sem categoria.')){P.cards.forEach(k=>{if(k.cat===c.id)k.cat=''});P.cats=P.cats.filter(x=>x!==c);curCat='all';change()}}}
+function bulk(a,v){const S=P.cards.filter(k=>sel.has(k.id));if(!S.length||v==='?')return toast('Selecione cartas primeiro.');
+ if(a==='cat')S.forEach(k=>k.cat=v);if(a==='fit')S.forEach(k=>k.fit=v);if(a==='rot')S.forEach(k=>k.rot=((k.rot||0)+v)%360);if(a==='copies'){const n=prompt('Cópias de cada carta selecionada:',1);if(n===null)return;S.forEach(k=>k.copies=Math.max(0,+n|0))}
+ if(a==='dup')S.forEach(k=>{const id=uid();B[id]=B[k.id];P.cards.push({...k,id,name:k.name+' (cópia)'})});
+ if(a==='rename'){const p=prompt('Prefixo (será numerado: prefixo 1, prefixo 2…):');if(!p)return;S.forEach((k,i)=>k.name=p+' '+(i+1))}
+ if(a==='ref'){if(S.length!==1)return toast('Selecione exatamente uma carta.');P.set.ref=S[0].id;P.set.refW=P.set.cw}
+ if(a==='del'){if(!confirm('Excluir '+S.length+' carta(s)?'))return;P.cards=P.cards.filter(k=>!sel.has(k.id));sel.clear()}change()}
+function stats(){const s=P.set,L=layout(s),it=items(),n=it.filter(Boolean).length,pg=L.per?Math.ceil(it.length/L.per):0,used=L.per*s.cw*s.ch;return`<div class="msg i"><b>${L.per}</b> cartas/folha (${L.cols}×${L.rows}; auto: ${L.ac}×${L.ar}) · <b>${pg}</b> folha(s)${s.duplex!=='none'?' (×2 faces)':''} para ${n} impressões<br>Área usada ${(used/L.W/L.H*100).toFixed(1)}% · sobra ${((L.W*L.H-used)/100).toFixed(0)} cm² · carta final ${s.cw}×${s.ch} mm (${(s.cw/25.4).toFixed(2)}×${(s.ch/25.4).toFixed(2)} pol)</div>`}
+function layV(){const s=P.set,ref=P.cards.find(c=>c.id===s.ref),L=layout(s),pages=Math.max(1,L.per?Math.ceil(items().length/L.per):1);
+ return`<div><details open><summary>Tamanho da carta e papel</summary><label>Predefinição<select onchange="const v=SZ[this.value];if(v){P.set.cw=v[0];P.set.ch=v[1];change()}"><option>Personalizado</option>${Object.keys(SZ).map(k=>`<option ${SZ[k][0]===s.cw&&SZ[k][1]===s.ch?'selected':''}>${k}</option>`).join('')}</select></label>${num('cw','Largura (mm)')}${num('ch','Altura (mm)')}
+ <label>Papel<select onchange="const v=PP[this.value];if(v){P.set.pw=v[0];P.set.ph=v[1]}P.set.paper=this.value;change()">${Object.keys(PP).map(k=>`<option ${s.paper===k?'selected':''}>${k}</option>`).join('')}</select></label>${s.paper==='Personalizado'?num('pw','Largura papel')+num('ph','Altura papel'):''}${chk_('land','Papel em paisagem')}
+ ${sel_('fit','Enquadramento padrão',[['cover','Preencher (corta excedente)'],['contain','Caber sem cortar'],['stretch','Esticar (distorce)']])}</details>
+ <details open><summary>Distribuição</summary>${num('cols','Colunas (0 = automático)',1)}${num('rows','Linhas (0 = automático)',1)}${num('gx','Espaço horizontal (mm)')}${num('gy','Espaço vertical (mm)')}${num('ml','Margem esquerda')}${num('mr','Margem direita')}${num('mt','Margem superior')}${num('mb','Margem inferior')}${num('np','Área não imprimível (mm)')}${sel_('align','Alinhamento do conjunto',[['c','Centralizado'],['s','No canto superior esquerdo']])}${sel_('order','Ordem',[['import','Importação / manual'],['name','Nome'],['cat','Categoria'],['random','Aleatória (fixa)']])}</details>
+ <details><summary>Cantos, marcas e corte</summary>${num('rad','Raio dos cantos (mm)')}${chk_('marks','Marcas de corte (frente)')}${chk_('contour','Contorno de corte arredondado')}<small class="h">O raio é aplicado como recorte da arte, sem deformá-la.</small></details>
+ <details open><summary>Rotação e organização</summary><div class="row"><b>Girar todas as frentes: ${s.rotAll}°</b><button onclick="U('rotAll',(P.set.rotAll+90)%360)">+90°</button><button onclick="U('rotAll',(P.set.rotAll+180)%360)">180°</button><button onclick="U('rotAll',0)">Zerar</button></div>${chk_('autoRot','Girar auto. para a orientação da carta')}${chk_('catPage','Uma categoria por página (frente e verso)')}${chk_('label','Imprimir categoria e folha na margem')}<small class="h">Para girar só algumas, selecione-as na Biblioteca. A giro é feito na arte; o tamanho físico da carta não muda.</small></details>
+ <details><summary>Padronização por referência</summary>${ref?`<p>Referência: <b>${esc(ref.name)}</b></p><label>Largura física (mm)<input type="number" step=".1" value="${s.refW}" onchange="U('refW',+this.value)"></label><button onclick="P.set.cw=P.set.refW;P.set.ch=+(P.set.refW*ref.h/ref.w).toFixed(2);change()">Aplicar tamanho (altura = ${(s.refW*ref.h/ref.w).toFixed(2)} mm)</button>`:'<small class="h">Na Biblioteca, selecione uma carta e clique em "Usar como referência".</small>'}
+ ${num('dpi','DPI mínimo desejado',50,50)}<small class="h">A proporção da referência não revela o tamanho físico: confirme a largura acima.</small></details>
+ <button onclick="if(confirm('Restaurar configurações recomendadas? Imagens e categorias são mantidas.')){P.set={...DEF(),ref:P.set.ref};change()}">Restaurar recomendadas</button></div>
+ <div>${stats()}${prevBar(pages)}<div class="sc"><canvas id="cv"></canvas></div></div>`}
+function prevBar(pages){return`<div class="row" style="margin:6px 0"><button onclick="pg=Math.max(0,pg-1);render()">◀</button><b>Folha ${pg+1}/${pages}</b><small>${esc(pageCat(pg,items()))}</small><button onclick="pg=Math.min(${pages-1},pg+1);render()">▶</button>
+ <button class="${side==='front'?'p':''}" onclick="side='front';render()">Frente</button><button class="${side==='back'?'p':''}" onclick="side='back';render()">Verso</button>
+ <label style="margin:0">Zoom<input type="range" min=".5" max="2.5" step=".1" value="${zoom}" style="width:110px" oninput="zoom=+this.value;drawPrev()"></label><label style="margin:0">Nº<input type="checkbox" style="width:auto" ${P.set.ids?'checked':''} onchange="U('ids',this.checked)"></label></div>`}
+const th=id=>{let t=TH[id];if(t===undefined){t=TH[id]=null;const i=new Image;i.onload=()=>{TH[id]=i;drawPrev()};i.src=B[id]?.thumb||''}return t};
+function drawPrev(){const c=$('#cv');if(!c)return;const s=P.set,L=layout(s),pages=Math.max(1,L.per?Math.ceil(items().length/L.per):1);pg=Math.min(pg,pages-1);const cw=520*zoom,k=cw/L.W,r=devicePixelRatio||1;
+ c.width=cw*r;c.height=L.H*k*r;c.style.width=cw+'px';c.style.height=L.H*k+'px';const x=c.getContext('2d');x.scale(r,r);x.fillStyle='#fff';x.fillRect(0,0,cw,L.H*k);x.strokeStyle='#e5a';x.setLineDash([3,3]);x.lineWidth=.5;x.strokeRect(s.ml*k,s.mt*k,L.aw*k,L.ah*k);x.setLineDash([]);
+ if(!L.fits){x.fillStyle='#c2255c';x.font='13px sans-serif';x.fillText('As cartas não cabem nesta configuração (veja Verificação).',10,24);return}
+ for(const sl of slots(pg,side)){const w=s.cw*k,h=s.ch*k,X=sl.x*k,Y=sl.y*k,m=sl.img&&B[sl.img],t=m&&th(sl.img);x.save();x.beginPath();x.roundRect(X,Y,w,h,s.rad*k);x.clip();x.fillStyle='#e6e8ee';x.fillRect(X,Y,w,h);
+  if(t){const[iw,ih]=dim(sl.img,sl.rot),[a,b,dw,dh]=fitRect(iw,ih,X,Y,w,h,side==='front'?sl.k.fit||s.fit:s.fit),qq=sl.rot%180;x.translate(a+dw/2,b+dh/2);x.rotate(sl.rot*Math.PI/180);x.drawImage(t,-(qq?dh:dw)/2,-(qq?dw:dh)/2,qq?dh:dw,qq?dw:dh)}else if(!sl.img){x.fillStyle='#889';x.font='12px sans-serif';x.textAlign='center';x.fillText('sem verso',X+w/2,Y+h/2)}x.restore();
+  x.strokeStyle='#778';x.lineWidth=.6;x.beginPath();x.roundRect(X,Y,w,h,s.rad*k);x.stroke();
+  if(s.ids){x.fillStyle='#000a';x.fillRect(X+2,Y+2,26,16);x.fillStyle='#fff';x.font='bold 12px sans-serif';x.textAlign='left';x.fillText(sl.n,X+5,Y+14)}
+  if(side==='front'&&s.marks){x.strokeStyle='#000';x.lineWidth=.5;mk(X,Y,w,h,(a,b,c2,d)=>{x.beginPath();x.moveTo(a,b);x.lineTo(c2,d);x.stroke()}),0}}}
+function bckV(){const s=P.set,L=layout(s),pages=Math.max(1,L.per?Math.ceil(items().length/L.per):1),S=sel.size;
+ return`<div><details open><summary>Imagens de verso</summary><button onclick="$('#fb').click()">Importar versos</button><div class="row" style="margin-top:6px">${P.backs.map(b=>`<div style="text-align:center;font-size:11px"><img src="${B[b.id].thumb}" height="70"><br>${esc(b.name)} ${b.rot||0}°<br><button onclick="const b=P.backs.find(x=>x.id==='${b.id}');b.rot=((b.rot||0)+90)%360;change()">↻</button><button class="d" onclick="P.backs=P.backs.filter(x=>x.id!=='${b.id}');change()">×</button></div>`).join('')||'<small class="h">Nenhum verso importado.</small>'}</div></details>
+ <details open><summary>Quem usa qual verso</summary><label>Global<select onchange="U('back',this.value||null)"><option value="">Nenhum</option>${P.backs.map(b=>`<option value="${b.id}" ${s.back===b.id?'selected':''}>${esc(b.name)}</option>`).join('')}</select></label>
+ ${P.cats.map(c=>`<label>${esc(c.name)}<select onchange="P.cats.find(x=>x.id==='${c.id}').back=this.value===''?undefined:this.value;change()">${bOpts(c.back===undefined?'':c.back,1)}</select></label>`).join('')}
+ <label>${S} carta(s) selecionada(s)<select onchange="const v=this.value;P.cards.forEach(k=>{if(sel.has(k.id))k.back=v===''?undefined:v});change()">${bOpts('?',1)}</select></label><small class="h">Hierarquia: carta › categoria › global. Selecione cartas na Biblioteca.</small></details>
+ <details open><summary>Duplex e calibração</summary>${sel_('duplex','Modo',[['none','Somente frentes (sem verso)'],['long','Virar pela borda longa'],['short','Virar pela borda curta']])}${num('dx','Ajuste X do verso (mm)',.1,-20)}${num('dy','Ajuste Y do verso (mm)',.1,-20)}
+ <div class="row"><b>Girar todos os versos: ${s.rotBack}°</b><button onclick="U('rotBack',(P.set.rotBack+90)%360)">+90°</button><button onclick="U('rotBack',(P.set.rotBack+180)%360)">180°</button><button onclick="U('rotBack',0)">Zerar</button></div><button onclick="genPdf('calib')">Gerar folha de teste de registro</button><p><small class="h">Para impressoras sem duplex: exporte, imprima as páginas ímpares (frentes), recoloque as folhas e imprima as pares, virando conforme o modo escolhido. Ligue "Nº" para ver cada frente e seu verso correspondente. Alinhamento digital não elimina a folga mecânica da impressora.</small></p></details></div>
+ <div>${stats()}${prevBar(pages)}<div class="sc"><canvas id="cv"></canvas></div></div>`}
+function chkV(){const c=checks(),g=(l,t)=>{const x=c.filter(m=>m.l===l);return x.length?`<h3>${t}</h3>`+x.map(m=>`<div class="msg ${l}">${esc(m.m)} ${m.f?`<button onclick="fix('${m.fl}')">${m.f}</button>`:''}</div>`).join(''):''};
+ const ok=!c.length?'<div class="msg i">Nenhum problema encontrado.</div>':'';
+ return`<div class="pn">${ok}${g('e','Erros (impedem a exportação)')}${g('w','Avisos importantes (você pode aceitar)')}${g('i','Recomendações')}
+ <h3>Diagnóstico por carta</h3><div style="max-height:50vh;overflow:auto">${P.cards.map(k=>{const D=diag(k);return`<div><span class="t ${D.c}">${D.t}</span> ${esc(k.name)} <small class="h">${B[k.id].w}×${B[k.id].h}px</small></div>`}).join('')||'—'}</div></div>`}
+function expV(){const s=P.set,L=layout(s),c=checks(),er=c.filter(x=>x.l==='e').length;
+ return`<div class="pn" style="max-width:760px"><h3 style="margin-top:0">Resumo</h3>${stats()}
+ <label>Perfil<select onchange="Object.assign(P.set,PRESETS[this.value]);change()"><option>Aplicar perfil…</option><option value="casa">Alta qualidade – impressão doméstica</option><option value="duplex">Impressora duplex</option><option value="manual">Frente e verso manual</option><option value="grafica">Gráfica (espaços e margens de 5/10 mm)</option><option value="eco">Econômico (sem marcas, menos folhas)</option></select></label>
+ ${sel_('expMode','Arquivo',[['combined','Combinado (frente e verso intercalados)'],['fronts','Somente frentes'],['backs','Somente versos']])}
+ <b>Categorias a imprimir</b> <small class="h">(nenhuma marcada = todas)</small><div class="row">${P.cats.map(k=>`<label style="margin:0"><input type="checkbox" style="width:auto" ${s.expCats.includes(k.id)?'checked':''} onchange="const a=P.set.expCats;this.checked?a.push('${k.id}'):a.splice(a.indexOf('${k.id}'),1);change()"> ${esc(k.name)}</label>`).join('')}<label style="margin:0"><input type="checkbox" style="width:auto" ${s.expCats.includes('')?'checked':''} onchange="const a=P.set.expCats;this.checked?a.push(''):a.splice(a.indexOf(''),1);change()"> Sem categoria</label></div>
+ <p>${er?`<span class="er">${er} erro(s) impedem a exportação</span> — veja Verificação.`:`${c.filter(x=>x.l==='w').length} aviso(s) · sem erros.`}</p>
+ <button class="p big" onclick="exportPdf()">GERAR PDF PARA IMPRESSÃO</button><div id="rep" style="margin-top:10px"></div>
+ <small class="h">Imagens JPEG/PNG sem rotação EXIF são embutidas sem recompressão; PNG é re-empacotado sem perdas; outros formatos viram PNG sem perdas. Imprima sempre em 100% / tamanho real.</small></div>`}
+(async()=>{try{await init()}catch(e){document.body.insertAdjacentHTML('beforeend','<p class="msg e">Falha ao iniciar o armazenamento local: '+e.message+'</p>')}})();
+async function init(){navigator.storage?.persist?.();let l=await projs();if(!l.length){await newP('Meu projeto');l=await projs()}const id=localStorage.getItem('cps.last');await openP((l.find(x=>x.id===id)||l[0]).id)}
+</script></body></html>

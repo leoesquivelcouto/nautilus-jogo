@@ -34,7 +34,7 @@ Por isso o projeto cobre o caminho inteiro de um produto real, não só o códig
 | **Balanceamento com dados** | Simulador próprio que joga milhares de partidas com bots. Cada mudança de regra foi testada antes de entrar no manual. |
 | **Viabilidade de produção** | Quantidade de cada componente dimensionada pelo pico de uso medido em simulação. A caixa caiu de 378 para **333 cartas**, e 42 cartas de tripulante viraram uma trilha com cubos no tabuleiro do jogador. |
 | **Tempo de partida** | O simulador estima a duração real: cerca de **58 minutos com 4 jogadores** e 73 com 6, dentro da meta de 60 a 90 minutos. |
-| **Pipeline de arte e impressão** | Duas ferramentas próprias para produção: um estúdio de impressão de cartas (frente e verso, sangria, PDF para gráfica) e um gerador de mapas hexagonais. |
+| **Pipeline de arte e impressão** | Ferramentas próprias para produção: uma extensão do Chrome que gera as ilustrações em fila no ChatGPT, um estúdio de impressão de cartas (frente e verso, sangria, PDF para gráfica) e um gerador de mapas hexagonais. |
 | **Protótipo digital** | O jogo completo no navegador contra bots, usado para playtest antes de imprimir. |
 
 ## Resultados do balanceamento
@@ -91,12 +91,13 @@ Mais de 6.000 partidas simuladas para fechar a v5. Detalhes e como rodar em [`pe
 
 ## Ferramentas de produção
 
-Feitas para este projeto e publicadas junto com o jogo. Rodam inteiras no navegador, sem servidor e sem conta.
+Feitas para este projeto e publicadas junto com o jogo. Cada uma cuida de uma etapa entre a ilustração e a gráfica, e todas rodam no computador de quem usa, sem servidor e sem conta. A explicação completa de cada uma está em **[`ferramentas/README.md`](ferramentas/README.md)**.
 
 | Ferramenta | Para que serve | Abrir |
 |---|---|---|
-| **Card Print Studio** | Monta as folhas de impressão das cartas: importa as artes, casa frente e verso, ajusta tamanho, margens e sangria, confere erros e exporta o PDF para a gráfica. | [abrir](https://nautilus-jogo.pages.dev/ferramentas/cartas/) · [código](web/public/ferramentas/cartas/index.html) |
-| **Gerador de Mapas Hexagonais** | Desenha e testa montagens do mapa: formato, bordas, categorias de hexágono, camadas e exportação em imagem. | [abrir](https://nautilus-jogo.pages.dev/ferramentas/mapas/) · [código](web/public/ferramentas/mapas/index.html) |
+| **Extensão Fila de Imagens** | Extensão do Chrome que recebe uma lista de prompts numerados e gera as ilustrações das cartas uma por vez no ChatGPT, com fila, pausa, retomada e confirmação de cada imagem antes da próxima. | [código](https://github.com/leoesquivelcouto/nautilus) (submódulo em [`ferramentas/`](ferramentas/)) |
+| **Card Print Studio** | Monta as folhas de impressão das cartas: importa as artes, casa frente e verso, ajusta tamanho, margens e sangria, confere a resolução e exporta o PDF para a gráfica. | [abrir](https://nautilus-jogo.pages.dev/ferramentas/cartas/) · [código](web/public/ferramentas/cartas/index.html) · [primeira versão](https://nautilus-jogo.pages.dev/ferramentas/cartas/primeira-versao/) |
+| **Gerador de Mapas Hexagonais** | Desenha e testa montagens do mapa: formato, bordas, categorias e arte dos hexágonos, embaralhamento, camadas e exportação do mapa e das peças em PDF e PNG. | [abrir](https://nautilus-jogo.pages.dev/ferramentas/mapas/) · [código](web/public/ferramentas/mapas/index.html) |
 | **Carta de auxílio** | Gera a arte da carta de preços a partir de uma tabela editável. | [abrir](https://nautilus-jogo.pages.dev/ferramentas/carta-auxilio/) · [código](web/public/ferramentas/carta-auxilio/index.html) |
 
 <table>
@@ -120,6 +121,7 @@ Feitas para este projeto e publicadas junto com o jogo. Rodam inteiras no navega
 web/                 o jogo (index.html, código em src/, imagens e ferramentas em public/)
 tests/               partidas automáticas do motor, servidor local com os cabeçalhos de produção, piloto da interface
 pesquisa/simulador/  simulador de balanceamento usado para chegar à v5
+ferramentas/         explicação das ferramentas de produção e a extensão de imagens (submódulo)
 docs/                livro de regras, catálogo de cartas, carta de auxílio e imagens deste README
 ```
 

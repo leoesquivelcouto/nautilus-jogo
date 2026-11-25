@@ -10,6 +10,7 @@ Notas técnicas do protótipo digital.
 | `web/src/` | `data.js` (regras e cartas), `engine.js` (motor), `bots.js`, `fx.js` (animação e som), `ui.js` (interface), `manual.js`, `auxilio.js`, estilos e fontes |
 | `web/public/` | Copiado sem mudança para o site: imagens (`assets/`), ferramentas (`ferramentas/`), `favicon.svg`, `_headers` |
 | `tests/` | Partidas automáticas do motor (`*.cjs`), servidor local com os cabeçalhos de produção, piloto automático da interface |
+| `ferramentas/` | Explicação das ferramentas de produção; `extensao-fila-de-imagens/` é um submódulo (`git submodule update --init`) |
 | `dist/` | Site gerado pelo build (fora do git) |
 
 ## Comandos
