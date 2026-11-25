@@ -1,0 +1,30 @@
+const { V4, D } = require("./engine");
+const mk = (base, name, o) => Object.assign({}, base, o, { name });
+const mapDeck = (deck, f) => deck.map(([q, n, r, fl]) => { const r2 = f(Object.assign({}, r), fl); return [q, n, r2, fl]; });
+
+const esc = [2, 3, 4, 5, 6];
+const A = mk(V4, "A: preço escalonado + 1 artefato por turno", { artCost: (n) => esc[Math.min(n, 4)], artPerTurn: 1 });
+const B = mk(A, "B: A + Maré Negra (Virada na rodada 8) + esqueleto renasce", { viradaRound: 8, respawn: true, survivalWin: false });
+const C = mk(B, "C: B + tripulante por ouro (comércio 3 ouros; taverna 1 rum)", { crewCom: { ouro: 3 }, crewTav: { rum: 1 } });
+const D1 = mk(C, "D: C + 1 peixe = 1 ouro", { fishToGold: 1 });
+const E = mk(C, "E: C + ouro dos baús pela metade", { baus: mapDeck(V4.baus, (r) => { if (r.ouro) r.ouro = Math.ceil(r.ouro / 2); for (const k of ["rum", "polvora", "lona"]) if (r[k]) r[k] = Math.ceil(r[k] / 2); return r; }) });
+const F = mk(E, "F: E + naufrágios +2 ouros", { naufragios: mapDeck(V4.naufragios, (r) => { r.ouro = (r.ouro || 0) + 2; return r; }) });
+
+module.exports = { A, B, C, D: D1, E, F };
+const V = module.exports;
+V.G = mk(V.E, "G: E + capitão também pesca (+1 peixe)", { fishBase: 1 });
+V.H = mk(V.G, "H: G + 1 peixe = 1 ouro", { fishToGold: 1 });
+V.I = mk(V.H, "I: H + naufrágios +1 ouro", { naufragios: mapDeck(V4.naufragios, (r) => { r.ouro = (r.ouro || 0) + 1; return r; }) });
+V.J = mk(V.H, "J: H, mas baús com valor impresso e artefato 3/4/5/6/7", { baus: V4.baus, artCost: (n) => [3, 4, 5, 6, 7][Math.min(n, 4)] });
+V.K = mk(V.H, "K: H + Pedra aceita peixe como ouro", { pedraBuysFish: true });
+V.L = mk(V.K, "L: K + naufrágios +1 ouro", { naufragios: V.I.naufragios });
+V.K_v6 = mk(V.K, "K com Virada na rodada 6", { viradaRound: 6 });
+V.K_v10 = mk(V.K, "K com Virada na rodada 10", { viradaRound: 10 });
+V.K_semMare = mk(V.K, "K sem Maré Negra (Virada só pelos baús)", { viradaRound: null });
+V.K_trip4 = mk(V.K, "K com tripulante a 4 ouros", { crewCom: { ouro: 4 } });
+V.K_semLimite = mk(V.K, "K sem limite de 1 artefato por turno", { artPerTurn: 99 });
+V.K_elim = mk(V.K, "K com eliminação definitiva (regra atual)", { respawn: false, survivalWin: true });
+V.K_pacto = mk(V.K, "K + pacto do Altar: quem vira esqueleto por vontade própria ganha 1 concha", { transformGift: { concha: 1 } });
+V.K_pacto2 = mk(V.K, "K + Altar grátis e dá 1 concha", { transformGift: { concha: 1 }, transformCost: 0 });
+V.v5 = mk(V.K_pacto, "v5 proposta", {});
+V.v5cartas = mk(V.v5, "v5 + correções de cartas", { perola: "pesca", reforcosN: 2, bolsaN: 3, conchaOcupadaOuro: 3, peixesMetade: true });

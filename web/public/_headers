@@ -17,3 +17,10 @@
 # Imagens do jogo (sem hash no nome): cache de 1 dia.
 /assets/*
   Cache-Control: public, max-age=86400
+
+# Ferramentas de produção (Card Print Studio, Gerador de Mapas, carta de auxílio): páginas independentes,
+# com scripts inline e fontes do Google. Trocam a CSP geral por uma própria, liberando só o necessário.
+# Elas não acessam conta nem servidor: tudo roda e fica no navegador de quem usa.
+/ferramentas/*
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'

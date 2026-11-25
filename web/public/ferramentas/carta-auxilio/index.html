@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Carta de Auxílio v5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=EB+Garamond:ital,wght@0,500;0,700;1,500&display=swap" rel="stylesheet">
+<style>
+  /* Carta 70 x 104 mm + 3 mm de sangria em cada lado = 76 x 110 mm por página */
+  @page { size: 76mm 110mm; margin: 0; }
+  :root {
+    --latao: linear-gradient(160deg, #f3d48a 0%, #c99a45 35%, #8a5f22 70%, #d9b066 100%);
+    --madeira: #24170d;
+    --painel: #3a2817;
+    --texto: #f1dfb4;
+    --sub: #c9a86a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #555; }
+  body.tela { display: flex; gap: 10mm; padding: 10mm; flex-wrap: wrap; }
+  body.impressao { background: none; }
+  .pagina { width: 76mm; height: 110mm; position: relative; overflow: hidden; page-break-after: always; break-after: page;
+    background:
+      radial-gradient(ellipse at 50% 40%, rgba(255,190,110,.10), transparent 60%),
+      repeating-linear-gradient(92deg, rgba(0,0,0,.18) 0 .6mm, rgba(255,255,255,.02) .6mm 1.4mm, rgba(0,0,0,.10) 1.4mm 2.6mm),
+      linear-gradient(180deg, #2c1c0f, #1b1009);
+  }
+  .linha-corte { position: absolute; inset: 3mm; border: .1mm dashed rgba(255,0,0,.55); pointer-events: none; z-index: 9; }
+  body.impressao .linha-corte { display: none; }
+  .carta { position: absolute; inset: 3mm; padding: 3.2mm; display: flex; flex-direction: column; gap: 1.6mm; }
+  .moldura { position: absolute; inset: 4.2mm; border-radius: 2.4mm; pointer-events: none;
+    box-shadow: inset 0 0 0 .55mm #d6a955, inset 0 0 0 .9mm #3b240e, inset 0 0 0 1.2mm #9b6d2c, inset 0 0 6mm rgba(0,0,0,.65); }
+  .rebite { position: absolute; width: 1.6mm; height: 1.6mm; border-radius: 50%; background: var(--latao); box-shadow: 0 .2mm .3mm #000; z-index: 2; }
+  .placa { align-self: center; margin-top: 1.4mm; padding: .9mm 4.5mm .7mm; border-radius: 1.6mm; background: var(--latao);
+    box-shadow: 0 .4mm .8mm rgba(0,0,0,.7), inset 0 0 0 .3mm #5a3a12; font-family: Cinzel, Georgia, serif; font-weight: 800;
+    font-size: 4.4mm; letter-spacing: .25mm; color: #2a1606; text-shadow: 0 .2mm 0 rgba(255,240,200,.6); white-space: nowrap; }
+  .placa.peq { font-size: 3.1mm; padding: .6mm 3mm .45mm; margin-top: .4mm; }
+  .secao { display: flex; flex-direction: column; gap: 1.1mm; }
+  #comercio { flex: 1; justify-content: space-evenly; padding-bottom: 1.2mm; }
+  #comercio .linha { min-height: 11.6mm; }
+  .ou { margin: 0 .3mm; }
+  #verso .carta { justify-content: space-between; gap: 0; }
+  #verso .rodape { margin-top: 0; }
+  #pedra .linha { min-height: 12mm; }
+  .duas .linha { min-height: 11.4mm; }
+  .duas .qtd { right: -.9mm; }
+  .nota-secao { text-align: center; font-family: "EB Garamond", Georgia, serif; font-style: italic; font-size: 2.35mm; color: var(--sub); margin-top: -.4mm; }
+  .linha { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 1mm;
+    background: linear-gradient(180deg, rgba(80,56,32,.95), rgba(52,35,20,.95)); border-radius: 1.4mm; padding: 1mm 1.6mm;
+    box-shadow: inset 0 0 0 .25mm rgba(214,169,85,.55), 0 .3mm .6mm rgba(0,0,0,.6); min-height: 11mm; }
+  .lado { display: flex; align-items: center; gap: .7mm; flex-wrap: nowrap; }
+  .lado.dir { justify-content: flex-end; }
+  .seta { font-family: Georgia, serif; color: #e2b866; font-size: 4.6mm; line-height: 1; text-shadow: 0 .3mm .4mm #000; flex: 0 0 auto; }
+  .mais, .ou { font-family: "EB Garamond", Georgia, serif; color: var(--texto); }
+  .mais { font-size: 3.6mm; font-weight: 700; }
+  .ou { font-size: 2.4mm; font-style: italic; color: var(--sub); }
+  .ic { position: relative; width: 8.2mm; height: 8.2mm; flex: 0 0 auto; }
+  .ic img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;
+    box-shadow: 0 0 0 .45mm #c99a45, 0 0 0 .7mm #2d1a08, 0 .5mm .8mm .7mm rgba(0,0,0,.55); }
+  .ic.grande { width: 9.4mm; height: 9.4mm; }
+  .qtd { position: absolute; right: -1.3mm; bottom: -1.1mm; min-width: 4mm; height: 4mm; padding: 0 .5mm; border-radius: 2mm;
+    background: #1d1209; box-shadow: 0 0 0 .3mm #d6a955; color: #f6e2b0; font: 700 2.5mm/4mm "EB Garamond", Georgia, serif; text-align: center; }
+  .bonus { position: absolute; right: -1.4mm; top: -1.2mm; width: 4.2mm; height: 4.6mm; background: #8e1d1d;
+    clip-path: polygon(0 0, 100% 0, 100% 62%, 50% 100%, 0 62%); color: #fff2d6; font: 700 2.4mm/3.8mm "EB Garamond", Georgia, serif; text-align: center;
+    filter: drop-shadow(0 0 .25mm #e2b866); }
+  .escada { display: grid; grid-template-columns: auto repeat(5, 1fr); align-items: center; gap: .3mm; margin: .2mm 1mm 0;
+    font-family: "EB Garamond", Georgia, serif; color: var(--texto); font-size: 2.35mm; text-align: center; }
+  .escada .rot { text-align: left; color: var(--sub); font-style: italic; padding-right: .8mm; line-height: 1.05; }
+  .escada .c { background: rgba(0,0,0,.35); border-radius: .8mm; padding: .35mm 0; box-shadow: inset 0 0 0 .2mm rgba(214,169,85,.45); }
+  .escada .c b { font-size: 2.9mm; color: #ffd98a; }
+  .duas { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4mm; }
+  .duas .linha { padding: .9mm 1mm; min-height: 10.2mm; }
+  .duas .ic { width: 7.2mm; height: 7.2mm; }
+  .duas .seta { font-size: 3.6mm; }
+  .rodape { margin-top: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 1.4mm; }
+  .rodape .linha { flex-direction: column; align-items: stretch; gap: .5mm; padding: .7mm 1mm; min-height: 0; }
+  .rodape .tit { font-family: Cinzel, Georgia, serif; font-weight: 800; font-size: 2.3mm; color: #e9c27a; text-align: center; letter-spacing: .15mm; }
+  .rodape .corpo { display: flex; align-items: center; justify-content: center; gap: .6mm; }
+  .rodape .ic { width: 5.6mm; height: 5.6mm; }
+  .rodape .qtd { transform: scale(.8); right: -1.5mm; bottom: -1.3mm; }
+  .rodape .txt { font-family: "EB Garamond", Georgia, serif; color: var(--texto); font-size: 2.3mm; line-height: 1.05; }
+  .rodape .seta { font-size: 3mm; }
+</style>
+</head>
+<body class="tela">
+
+<!-- =================== FRENTE: COMÉRCIO =================== -->
+<div class="pagina" id="frente">
+  <div class="moldura"></div>
+  <div class="carta">
+    <div class="placa">COMÉRCIO</div>
+    <div class="nota-secao">Quantas operações quiser, no mesmo turno</div>
+    <div class="secao" id="comercio"></div>
+  </div>
+  <div class="linha-corte"></div>
+</div>
+
+<!-- =================== VERSO: PEDRA, TAVERNA, OSSUÁRIO =================== -->
+<div class="pagina" id="verso">
+  <div class="moldura"></div>
+  <div class="carta">
+    <div class="placa peq">PEDRA DAS SEREIAS</div>
+    <div class="secao" id="pedra"></div>
+    <div class="escada" id="escada"></div>
+    <div class="nota-secao">Peixe vale como ouro aqui · máximo 1 artefato por turno</div>
+    <div class="duas">
+      <div class="secao"><div class="placa peq">TAVERNA</div><div class="secao" id="taverna"></div></div>
+      <div class="secao"><div class="placa peq">OSSUÁRIO</div><div class="secao" id="ossuario"></div></div>
+    </div>
+    <div class="nota-secao" style="margin-top:-.2mm">Ossuário: só esqueletos</div>
+    <div class="rodape" id="rodape"></div>
+  </div>
+  <div class="linha-corte"></div>
+</div>
+
+<script>
+// ---------- VALORES FINAIS v5 (edite aqui) ----------
+// Cada item: [ícone, quantidade, bônus]. "ou" e "+" são separadores.
+const COMERCIO = [
+  [[["peixe", 1]], [["ouro", 1]]],
+  [[["ouro", 3]], [["tripulante", 1]]],
+  [[["ouro", 3], "+", ["lona", 1], "+", ["polvora", 1]], [["velocidade", 1, "+1"]]],
+  [[["ouro", 5], "+", ["rum", 1], "+", ["polvora", 1]], [["ataque", 1, "+1"]]],
+  [[["rum", 4], "ou", ["polvora", 4], "ou", ["lona", 4]], [["ouro", 3]]],
+  [[["ouro", 3]], [["rum", 1], "ou", ["polvora", 1], "ou", ["lona", 1]]],
+];
+const PEDRA = [
+  [[["ouro", 3]], [["concha", 1]]],
+  [[["concha", 1], "+", ["ouro", "2–6"]], [["artefato", 1]]],
+];
+const ESCADA = { rotulo: "Artefatos que você já tem", tem: [0, 1, 2, 3, 4], ouro: [2, 3, 4, 5, 6] };
+const TAVERNA = [
+  [[["rum", 1]], [["tripulante", 1]]],
+  [[["rum", 1], "+", ["polvora", 1]], [["ataque", 1, "+1"]]],
+];
+const OSSUARIO = [
+  [[["ouro", 4]], [["concha", 1]]],
+  [[["concha", 1]], [["ouro", 2]]],
+];
+const RODAPE = [
+  { tit: "CAPELA", in: [["ouro", 7]], out: "sem maldições" },
+  { tit: "ALTAR", in: [["ouro", 3]], out: "esqueleto <span class='mais'>+</span>", outIc: ["concha", 1] },
+];
+// ----------------------------------------------------
+
+const icone = ([n, q, b], cls = "") =>
+  `<span class="ic ${cls}"><img src="icones/${n}.png" alt="${n}">${q !== 1 && q !== undefined ? `<span class="qtd">×${q}</span>` : ""}${b ? `<span class="bonus">${b}</span>` : ""}</span>`;
+const lado = (itens, dir) => `<div class="lado ${dir ? "dir" : ""}">${itens.map((i) =>
+  i === "+" ? `<span class="mais">+</span>` : i === "ou" ? `<span class="ou">ou</span>` : icone(i, dir && itens.length === 1 ? "grande" : "")).join("")}</div>`;
+const linhas = (id, rows) => document.getElementById(id).innerHTML = rows.map(([a, b]) =>
+  `<div class="linha">${lado(a)}<span class="seta">➜</span>${lado(b, true)}</div>`).join("");
+linhas("comercio", COMERCIO); linhas("pedra", PEDRA); linhas("taverna", TAVERNA); linhas("ossuario", OSSUARIO);
+document.getElementById("escada").innerHTML = `<span class="rot">${ESCADA.rotulo}<br>→ ouros a pagar</span>` +
+  ESCADA.tem.map((t, i) => `<span class="c">${t} → <b>${ESCADA.ouro[i]}</b></span>`).join("");
+document.getElementById("rodape").innerHTML = RODAPE.map((r) =>
+  `<div class="linha"><div class="tit">${r.tit}</div><div class="corpo">${r.in.map((i) => icone(i)).join("")}<span class="seta">➜</span><span class="txt">${r.out}</span>${r.outIc ? icone(r.outIc) : ""}</div></div>`).join("");
+// rebites nos cantos
+for (const p of document.querySelectorAll(".pagina")) for (const [x, y] of [[5.2, 5.2], [68.5, 5.2], [5.2, 103.2], [68.5, 103.2]])
+  p.insertAdjacentHTML("beforeend", `<span class="rebite" style="left:${x}mm;top:${y}mm"></span>`);
+// #imprimir = sem linha de corte; #frente / #verso = só uma face (para exportar PNG)
+const h = location.hash.slice(1);
+if (["imprimir", "frente", "verso"].includes(h)) document.body.className = "impressao";
+if (h === "frente") document.getElementById("verso").remove();
+if (h === "verso") document.getElementById("frente").remove();
+</script>
+</body>
+</html>

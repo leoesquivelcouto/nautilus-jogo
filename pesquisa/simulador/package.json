@@ -1,0 +1,1 @@
+{ "type": "commonjs", "private": true, "description": "Simulador de balanceamento do Nautilus (Node puro, sem dependências)" }

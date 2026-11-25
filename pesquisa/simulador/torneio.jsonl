@@ -1,0 +1,7 @@
+{"mesa":[0,1,1,2],"forca_100_justo":{"agress_0":94,"agress_1":101,"agress_2":104},"rodadas":14,"ataques_por_jogo":1.4,"afundamentos":0.19}
+{"mesa":[0,0,2,2],"forca_100_justo":{"agress_0":97,"agress_2":103},"rodadas":14,"ataques_por_jogo":1.41,"afundamentos":0.15}
+{"mesa":[1,1,1,2],"forca_100_justo":{"agress_1":100,"agress_2":101},"rodadas":14,"ataques_por_jogo":1.77,"afundamentos":0.27}
+{"mesa":[1,1,1,0],"forca_100_justo":{"agress_0":102,"agress_1":99},"rodadas":14,"ataques_por_jogo":1.05,"afundamentos":0.14}
+{"mesa_toda_agress":0,"rodadas":14,"minutos":52,"ataques_por_jogo":0,"afundamentos":0}
+{"mesa_toda_agress":1,"rodadas":14,"minutos":54,"ataques_por_jogo":1.54,"afundamentos":0.21}
+{"mesa_toda_agress":2,"rodadas":14,"minutos":56,"ataques_por_jogo":3.21,"afundamentos":0.4}
